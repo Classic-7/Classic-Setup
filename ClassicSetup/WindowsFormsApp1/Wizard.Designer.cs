@@ -40,6 +40,9 @@
             this.wizardPage6 = new AeroWizard.WizardPage();
             this.bwsrlinkpanel = new System.Windows.Forms.FlowLayoutPanel();
             this.label5 = new System.Windows.Forms.Label();
+            this.wizardPage4 = new AeroWizard.WizardPage();
+            this.openwithPanel = new System.Windows.Forms.FlowLayoutPanel();
+            this.label3 = new System.Windows.Forms.Label();
             this.wizardPage5 = new AeroWizard.WizardPage();
             this.rebootpanel = new System.Windows.Forms.FlowLayoutPanel();
             this.label4 = new System.Windows.Forms.Label();
@@ -49,6 +52,7 @@
             this.wizardPage2.SuspendLayout();
             this.wizardPage3.SuspendLayout();
             this.wizardPage6.SuspendLayout();
+            this.wizardPage4.SuspendLayout();
             this.wizardPage5.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -78,6 +82,7 @@
             this.welcomeWizard.Pages.Add(this.wizardPage2);
             this.welcomeWizard.Pages.Add(this.wizardPage3);
             this.welcomeWizard.Pages.Add(this.wizardPage6);
+            this.welcomeWizard.Pages.Add(this.wizardPage4);
             this.welcomeWizard.Pages.Add(this.wizardPage5);
             this.welcomeWizard.Size = new System.Drawing.Size(584, 462);
             this.welcomeWizard.TabIndex = 1;
@@ -153,6 +158,32 @@
             this.label5.TabIndex = 0;
             this.label5.Text = "Choose your preferred style of Firefox skin\r\n";
             // 
+            // wizardPage4
+            // 
+            this.wizardPage4.Controls.Add(this.openwithPanel);
+            this.wizardPage4.Controls.Add(this.label3);
+            this.wizardPage4.Name = "wizardPage4";
+            this.wizardPage4.Size = new System.Drawing.Size(537, 308);
+            this.wizardPage4.TabIndex = 5;
+            this.wizardPage4.Text = "Choose your OpenWith version";
+            // 
+            // openwithPanel
+            // 
+            this.openwithPanel.Location = new System.Drawing.Point(3, 37);
+            this.openwithPanel.Name = "openwithPanel";
+            this.openwithPanel.Size = new System.Drawing.Size(500, 190);
+            this.openwithPanel.TabIndex = 3;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(1, 0);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(248, 30);
+            this.label3.TabIndex = 2;
+            this.label3.Text = "Choose your preferred OpenWith version\r\n(Just a note! Windows 7\'s style can be bu" +
+    "ggy!)";
+            // 
             // wizardPage5
             // 
             this.wizardPage5.AllowCancel = false;
@@ -201,6 +232,8 @@
             this.wizardPage3.PerformLayout();
             this.wizardPage6.ResumeLayout(false);
             this.wizardPage6.PerformLayout();
+            this.wizardPage4.ResumeLayout(false);
+            this.wizardPage4.PerformLayout();
             this.wizardPage5.ResumeLayout(false);
             this.wizardPage5.PerformLayout();
             this.ResumeLayout(false);
@@ -223,6 +256,9 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.FlowLayoutPanel bwsrlinkpanel;
         private System.Windows.Forms.FlowLayoutPanel rebootpanel;
+        private AeroWizard.WizardPage wizardPage4;
+        private System.Windows.Forms.FlowLayoutPanel openwithPanel;
+        private System.Windows.Forms.Label label3;
     }
 }
 

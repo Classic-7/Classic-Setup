@@ -1,19 +1,20 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
 using System.Windows.Forms;
-using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Microsoft.Win32;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Linq;
 
 namespace ClassicSetup
 {
     public partial class Wizard : Form
     {
         private readonly string logFilePath = @"C:\Classic Files\firsttime.log";
-        private bool hasSimulatedWinR = false;
-
+    
         public Wizard()
         {
             InitializeComponent();
@@ -25,13 +26,15 @@ namespace ClassicSetup
             AddCommandLinkButton(cmdlinkpanel, "Windows 7 Ultimate branding", BrandingButton_Click);
             AddCommandLinkButton(cmdlinkpanel, "Windows 7 Professional branding", BrandingButton_Click);
             AddCommandLinkButton(cmdlinkpanel, "Windows 7 Home Premium branding", BrandingButton_Click);
-            AddCommandLinkButton(cmdlinkpanel, "Windows 7 Home Basic branding", BrandingButton_Click);
-            AddCommandLinkButton(cmdlinkpanel, "Windows 7 Starter branding", BrandingButton_Click);
+            AddCommandLinkButton(cmdlinkpanel, "Windows 7 Enterprise branding", BrandingButton_Click);
 
             AddCommandLinkButton(bwsrlinkpanel, "Internet Explorer 11 style (BeautyFox)", BrowserButton_Click);
             AddCommandLinkButton(bwsrlinkpanel, "Firefox 14 - 28 style (Echelon)", BrowserButton_Click);
-            AddCommandLinkButton(bwsrlinkpanel, "Chrome 23 style (Silverfox)", BrowserButton_Click);
+            AddCommandLinkButton(bwsrlinkpanel, "Chrome 1 - 58 style (Geckium)", BrowserButton_Click);
             AddCommandLinkButton(bwsrlinkpanel, "Firefox 115 (Unmodified)", BrowserButton_Click);
+
+            AddCommandLinkButton(openwithPanel, "Windows 10 OpenWith style", BrowserButton_Click);
+            AddCommandLinkButton(openwithPanel, "Windows 7 OpenWith style", BrowserButton_Click);
 
             AddCommandLinkButton(rebootpanel, "Reboot now and finish the post-install stage", RebootButton_Click);
             Log("Added buttons");
@@ -62,11 +65,8 @@ namespace ClassicSetup
                 case "Windows 7 Home Premium branding":
                     ApplyBranding("Premium");
                     break;
-                case "Windows 7 Home Basic branding":
-                    ApplyBranding("Basic");
-                    break;
-                case "Windows 7 Starter branding":
-                    ApplyBranding("Starter");
+                case "Windows 7 Enterprise branding":
+                    ApplyBranding("Enterprise");
                     break;
             }
             welcomeWizard.NextPage();
@@ -86,20 +86,13 @@ namespace ClassicSetup
                 RunCLHBranding($"\"{edition}\"");
 
                 Log($"Executed branding.exe for {edition}");
-
-                if (edition == "Starter")
-                {
-                    ApplyStarterWallpaper();
-                }
             }
             catch (UnauthorizedAccessException uex)
             {
-                MessageBox.Show($"Permission denied while applying {edition} branding: {uex.Message}");
                 Log($"Permission denied: {uex.Message}");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to apply {edition} branding: {ex.Message}");
                 Log($"Error applying {edition} branding: {ex.Message}");
             }
         }
@@ -141,8 +134,6 @@ namespace ClassicSetup
             }
         }
 
-
-
         private void CopyDirectory(string sourceDir, string destinationDir)
         {
             if (!Directory.Exists(destinationDir))
@@ -164,28 +155,6 @@ namespace ClassicSetup
             }
         }
 
-        private void ApplyStarterWallpaper()
-        {
-            string wallpaperPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Branding", "Starter", "wallpaper.jpg");
-
-            if (File.Exists(wallpaperPath))
-            {
-                SetWallpaper(wallpaperPath);
-                Log("Applied Starter Wallpaper");
-            }
-        }
-
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-        const int SPI_SETDESKWALLPAPER = 0x0014;
-        const int SPIF_UPDATEINIFILE = 0x01;
-        const int SPIF_SENDCHANGE = 0x02;
-
-        private void SetWallpaper(string wallpaperPath)
-        {
-            SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, wallpaperPath, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-        }
-
         private void BrowserButton_Click(object sender, EventArgs e)
         {
             var button = (CommandLinkButton)sender;
@@ -197,8 +166,9 @@ namespace ClassicSetup
                 case "Firefox 14 - 28 style (Echelon)":
                     ApplyFirefox10To13Style();
                     break;
-                case "Chrome 23 style (Silverfox)":
+                case "Chrome 1 - 58 style (Geckium)":
                     ApplyChrome2012Style();
+                    MessageBox.Show("Don't reboot until you see a message confirming Geckium is done downloading!");
                     break;
                 case "Firefox 115 (Unmodified)":
                     ApplyFirefox115Style();
@@ -223,8 +193,8 @@ namespace ClassicSetup
 
         private void ApplyChrome2012Style()
         {
-            ApplyBrowserStyle("Silverfox");
-            Log("Applied Chrome 23 Style");
+            ApplyBrowserStyle("Geckium");
+            Log("Applied Geckium");
         }
 
         private void ApplyFirefox115Style()
@@ -233,8 +203,15 @@ namespace ClassicSetup
             Log("Applied Default Firefox 115 Style");
         }
 
-        private void ApplyBrowserStyle(string folderName)
+        private async void ApplyBrowserStyle(string folderName)
         {
+            if (folderName == "Geckium")
+            {
+                await DownloadAndApplyGeckium();
+                Log("Downloaded and applied Geckium style.");
+                return;
+            }
+
             string sourceFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Browser", folderName);
             string programFilesFolder = @"C:\Program Files\Mozilla Firefox";
             string appDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -250,6 +227,166 @@ namespace ClassicSetup
                 MessageBox.Show($"Source folder does not exist: {sourceFolder}");
                 Log($"Error: Source folder does not exist: {sourceFolder}");
             }
+        }
+
+        private async Task DownloadAndApplyGeckium()
+        {
+            string tagsUrl = "https://api.github.com/repos/angelbruni/Geckium/tags";
+            string downloadPath = @"C:\Classic Files\Classic Setup\Browser\Geckium";
+            string firefoxInstallPath = @"C:\Program Files\Mozilla Firefox";
+            string ff115ProfileBasePath = @"C:\Classic Files\Classic Setup\Browser\FF115";
+            string userAgent = "ClassicSetupApp";
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string ff115AppDataProfilePath = Path.Combine(ff115ProfileBasePath, "ADFolder");
+            string geckiumProfileFolder = @"Profile Folder";
+
+            try
+            {
+                Debug.WriteLine("Initializing HTTP client.");
+                using (HttpClient client = new HttpClient())
+                {
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
+
+                    Debug.WriteLine($"Fetching tags from: {tagsUrl}");
+                    HttpResponseMessage tagsResponse = await client.GetAsync(tagsUrl);
+
+                    Debug.WriteLine($"Response status code: {tagsResponse.StatusCode}");
+                    if (!tagsResponse.IsSuccessStatusCode)
+                    {
+                        Log($"Failed to fetch tags: {tagsResponse.StatusCode}");
+                        MessageBox.Show($"Failed to fetch tags: {tagsResponse.ReasonPhrase} (Code {tagsResponse.StatusCode})");
+                        return;
+                    }
+
+                    string tagsJson = await tagsResponse.Content.ReadAsStringAsync();
+                    Debug.WriteLine($"Tags JSON received: {tagsJson}");
+                    dynamic tags = Newtonsoft.Json.JsonConvert.DeserializeObject(tagsJson);
+
+                    if (tags.Count == 0)
+                    {
+                        Debug.WriteLine("No tags found in the repository.");
+                        MessageBox.Show("No tags found in the repository.");
+                        Log("No tags found in the repository.");
+                        return;
+                    }
+
+                    Debug.WriteLine("Parsing tag names.");
+                    List<string> tagNames = new List<string>();
+                    foreach (var tag in tags)
+                    {
+                        string tagName = (string)tag.name;
+                        tagNames.Add(tagName);
+                        Debug.WriteLine($"Tag found: {tagName}");
+                    }
+
+                    Debug.WriteLine("Sorting tags to find the latest.");
+                    string latestTag = GetLatestTag(tagNames);
+                    Debug.WriteLine($"Latest tag determined: {latestTag}");
+
+                    string assetUrl = $"https://github.com/angelbruni/Geckium/archive/refs/tags/{latestTag}.zip";
+                    string fileName = $"{latestTag}.zip";
+                    Debug.WriteLine($"Asset URL: {assetUrl}");
+                    Debug.WriteLine($"File will be saved as: {fileName}");
+
+                    Directory.CreateDirectory(downloadPath);
+                    Debug.WriteLine($"Download directory created/verified: {downloadPath}");
+
+                    string zipPath = Path.Combine(downloadPath, fileName);
+
+                    Debug.WriteLine($"Starting download of: {assetUrl}");
+                    using (HttpResponseMessage downloadResponse = await client.GetAsync(assetUrl, HttpCompletionOption.ResponseHeadersRead))
+                    {
+                        downloadResponse.EnsureSuccessStatusCode();
+
+                        using (var contentStream = await downloadResponse.Content.ReadAsStreamAsync())
+                        using (var fileStream = new FileStream(zipPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        {
+                            await contentStream.CopyToAsync(fileStream);
+                        }
+                    }
+
+                    Debug.WriteLine($"Download completed: {zipPath}");
+                    Log($"Downloaded Geckium latest tag: {fileName}");
+
+                    Debug.WriteLine($"Extracting zip file: {zipPath}");
+                    string extractPath = Path.Combine(downloadPath, "Extracted");
+                    System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractPath);
+
+                    string extractedFolder = Path.Combine(extractPath, $"Geckium-{latestTag}");
+                    if (!Directory.Exists(extractedFolder))
+                    {
+                        throw new DirectoryNotFoundException($"Expected folder not found: {extractedFolder}");
+                    }
+
+                    Debug.WriteLine($"Extracted folder found: {extractedFolder}");
+
+                    string firefoxFolder = Path.Combine(extractedFolder, "Firefox Folder");
+                    string profileFolder = Path.Combine(extractedFolder, geckiumProfileFolder);
+
+                    Debug.WriteLine($"Copying Firefox Folder contents from {firefoxFolder} to: {firefoxInstallPath}");
+                    if (Directory.Exists(firefoxFolder))
+                    {
+                        CopyFilesRecursively(new DirectoryInfo(firefoxFolder), new DirectoryInfo(firefoxInstallPath));
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Firefox Folder does not exist in the extracted content.");
+                    }
+
+                    Debug.WriteLine($"Applying FF115 profile folder from {ff115AppDataProfilePath} to {appDataPath}");
+                    string appDataFF115Path = Path.Combine(appDataPath);
+                    if (Directory.Exists(ff115AppDataProfilePath))
+                    {
+                        Debug.WriteLine($"Contents of ADFolder: {string.Join(", ", Directory.GetFiles(ff115AppDataProfilePath))}");
+                        CopyFilesRecursively(new DirectoryInfo(ff115AppDataProfilePath), new DirectoryInfo(appDataFF115Path));
+                    }
+                    else
+                    {
+                        Debug.WriteLine("FF115 profile folder (ADFolder) does not exist.");
+                    }
+
+                    string ff115ProfileFolderPath = Path.Combine(appDataFF115Path,"Mozilla", "Firefox", "Profiles", "foky7k51.ff115");
+                    Debug.WriteLine($"Merging Geckium Profile Folder into {ff115ProfileFolderPath}");
+                    if (Directory.Exists(ff115ProfileFolderPath) && Directory.Exists(profileFolder))
+                    {
+                        Debug.WriteLine($"Contents of Geckium Profile Folder: {string.Join(", ", Directory.GetFiles(profileFolder))}");
+                        CopyFilesRecursively(new DirectoryInfo(profileFolder), new DirectoryInfo(ff115ProfileFolderPath));
+                    }
+                    else
+                    {
+                        Debug.WriteLine("Either the FF115 profile or Geckium profile folder is missing.");
+                    }
+
+                    Debug.WriteLine("Geckium installation and configuration completed.");
+                    Log("Geckium installation and configuration completed successfully.");
+                    MessageBox.Show("Geckium is installed! You will need to perform the first-time setup after you launch Firefox.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Exception occurred: {ex.Message}");
+                MessageBox.Show($"Failed to download or apply Geckium: {ex.Message}");
+                Log($"Error during Geckium installation: {ex.Message}");
+            }
+        }
+
+        private string GetLatestTag(List<string> tagNames)
+        {
+            Debug.WriteLine("Starting semantic sort of tags.");
+            string latestTag = tagNames
+                .OrderByDescending(tag =>
+                {
+                    Debug.WriteLine($"Parsing version: {tag}");
+                    var parts = tag.TrimStart('b').Split('.');
+                    return new Version(
+                        int.Parse(parts[0]),
+                        int.Parse(parts[1]),
+                        parts.Length > 2 ? int.Parse(parts[2]) : 0
+                    );
+                })
+                .First();
+            Debug.WriteLine($"Latest tag after sorting: {latestTag}");
+            return latestTag;
         }
 
         private void CopyShortcutFiles(string sourceFolder, string destinationFolder)
@@ -306,17 +443,62 @@ namespace ClassicSetup
             }
         }
 
-        private void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
+        private void CopyAdFolderToAppData()
+        {
+            string adFolderPath = @"C:\Classic Files\Classic Setup\Browser\FF115\ADFolder";
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+
+            if (!Directory.Exists(appDataPath))
+            {
+                Directory.CreateDirectory(appDataPath);
+            }
+
+            try
+            {
+                Log($"Starting to copy files from {adFolderPath} to {appDataPath}");
+                CopyFilesDirectlyToAppData(new DirectoryInfo(adFolderPath), appDataPath);
+                Log("Successfully copied all files from ADFolder to AppData.");
+            }
+            catch (Exception ex)
+            {
+                Log($"Error while copying ADFolder to AppData: {ex.Message}");
+            }
+        }
+
+        private void CopyFilesDirectlyToAppData(DirectoryInfo source, string targetPath)
         {
             foreach (var dir in source.GetDirectories())
             {
-                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
+                string targetSubDir = Path.Combine(targetPath, dir.Name);
+
+                if (!Directory.Exists(targetSubDir))
+                {
+                    Directory.CreateDirectory(targetSubDir);
+                }
+
+                CopyFilesDirectlyToAppData(dir, targetSubDir);
             }
 
             foreach (var file in source.GetFiles())
             {
-                string path = Path.Combine(target.FullName, file.Name);
-                file.CopyTo(path, true);
+                string targetFilePath = Path.Combine(targetPath, file.Name);
+
+                file.CopyTo(targetFilePath, true);
+            }
+        }
+
+        private void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
+        {
+            foreach (var dir in source.GetDirectories())
+            {
+                DirectoryInfo targetSubDir = target.CreateSubdirectory(dir.Name);
+                CopyFilesRecursively(dir, targetSubDir);
+            }
+
+            foreach (var file in source.GetFiles())
+            {
+                string targetFilePath = Path.Combine(target.FullName, file.Name);
+                file.CopyTo(targetFilePath, true);
             }
         }
 
@@ -325,7 +507,7 @@ namespace ClassicSetup
             RebootSystem();
         }
 
-        private void RebootSystem( )
+        private void RebootSystem()
         {
             try
             {

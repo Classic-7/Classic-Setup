@@ -117,6 +117,16 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="label1.Text" xml:space="preserve">
+    <value>This is Classic 7's first time use setup utility.
+Once you've completed all the steps, your system will restart to apply some finishing touches.
+
+This wizard will let you customise your:
+
+· Branding: Choose your preferred style of branding
+· Browser Style: Choose preferred style of Firefox
+</value>
+  </data>
   <assembly alias="System.Drawing" name="System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
   <data name="welcomeWizard.TitleIcon" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
@@ -3481,16 +3491,6 @@
         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYVFRAZmRgj4J/fd+HhIL/hoOB/3x6d89ramqfWFhQIAAAAAAA
         AAAAAAAAAAAAAADwDwAAwAMAAIABAACAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA
         AQAAgAEAAMADAADwDwAA
-</value>
-  </data>
-  <data name="label1.Text" xml:space="preserve">
-    <value>This is Classic 7's first time use setup utility.
-Once you've completed all the steps, your system will restart to apply some finishing touches.
-
-This wizard will let you customise your:
-
-· Branding: Choose your preferred style of branding
-· Browser Style: Choose preferred style of Firefox
 </value>
   </data>
 </root>
